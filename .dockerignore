@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+node_modules
+frontend/node_modules
+frontend/dist
+dist
+.playwright-mcp
+tmp
+tmp-demo-input.png
+*.pyc
+__pycache__
+*.log
+runpod
+worker
+proxy
+.runpod

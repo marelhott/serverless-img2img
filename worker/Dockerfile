@@ -1,4 +1,4 @@
-FROM runpod/pytorch:2.5.1-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 WORKDIR /app
 
@@ -14,4 +14,3 @@ ENV DEFAULT_SCHEDULER=dpmpp_2m_karras
 ENV OUTPUT_FORMAT=PNG
 
 CMD ["python", "-u", "handler.py"]
-

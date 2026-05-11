@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import runpod
-import torch
-from diffusers import DPMSolverMultistepScheduler, StableDiffusionXLImg2ImgPipeline
 from PIL import Image, ImageOps
 
 
@@ -29,6 +27,8 @@ CURRENT_PIPELINE = None
 CURRENT_LORA_ID = "none"
 CURRENT_LORA_STRENGTH = 0.0
 MODEL_CONFIG = None
+TORCH_MODULE = None
+DIFFUSERS_MODULES = None
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,7 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
         if use_test_mode():
             return build_test_response(generation_input)
 
+        torch = get_torch()
         pipe = ensure_pipeline(generation_input.model_id)
         ensure_lora(pipe, generation_input.lora_id, generation_input.lora_strength)
 
@@ -87,11 +88,36 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
                 "guidance_scale": guidance_scale,
             },
         }
-    except torch.cuda.OutOfMemoryError as exc:
-        clear_cuda()
-        return {"error": f"CUDA out of memory: {exc}"}
     except Exception as exc:
+        if is_cuda_oom(exc):
+            clear_cuda()
+            return {"error": f"CUDA out of memory: {exc}"}
         return {"error": str(exc)}
+
+
+def get_torch():
+    global TORCH_MODULE
+    if TORCH_MODULE is None:
+        import torch
+
+        TORCH_MODULE = torch
+    return TORCH_MODULE
+
+
+def get_diffusers():
+    global DIFFUSERS_MODULES
+    if DIFFUSERS_MODULES is None:
+        from diffusers import DPMSolverMultistepScheduler, StableDiffusionXLImg2ImgPipeline
+
+        DIFFUSERS_MODULES = {
+            "scheduler": DPMSolverMultistepScheduler,
+            "pipeline": StableDiffusionXLImg2ImgPipeline,
+        }
+    return DIFFUSERS_MODULES
+
+
+def is_cuda_oom(exc: Exception) -> bool:
+    return exc.__class__.__name__ == "OutOfMemoryError" and exc.__class__.__module__.startswith("torch")
 
 
 def parse_input(payload: dict[str, Any]) -> GenerationInput:
@@ -118,7 +144,7 @@ def parse_input(payload: dict[str, Any]) -> GenerationInput:
     )
 
 
-def ensure_pipeline(model_id: str) -> StableDiffusionXLImg2ImgPipeline:
+def ensure_pipeline(model_id: str):
     global CURRENT_MODEL_ID, CURRENT_PIPELINE, CURRENT_LORA_ID, CURRENT_LORA_STRENGTH
 
     if CURRENT_PIPELINE is not None and CURRENT_MODEL_ID == model_id:
@@ -134,7 +160,9 @@ def ensure_pipeline(model_id: str) -> StableDiffusionXLImg2ImgPipeline:
         CURRENT_PIPELINE = None
         clear_cuda()
 
-    pipe = StableDiffusionXLImg2ImgPipeline.from_single_file(
+    torch = get_torch()
+    diffusers = get_diffusers()
+    pipe = diffusers["pipeline"].from_single_file(
         model_path,
         torch_dtype=torch.float16,
         use_safetensors=True,
@@ -157,7 +185,7 @@ def ensure_pipeline(model_id: str) -> StableDiffusionXLImg2ImgPipeline:
     return pipe
 
 
-def ensure_lora(pipe: StableDiffusionXLImg2ImgPipeline, lora_id: str, lora_strength: float) -> None:
+def ensure_lora(pipe, lora_id: str, lora_strength: float) -> None:
     global CURRENT_LORA_ID, CURRENT_LORA_STRENGTH
 
     if lora_id == "none":
@@ -183,8 +211,9 @@ def ensure_lora(pipe: StableDiffusionXLImg2ImgPipeline, lora_id: str, lora_stren
         CURRENT_LORA_STRENGTH = lora_strength
 
 
-def make_scheduler(config: Any) -> DPMSolverMultistepScheduler:
-    return DPMSolverMultistepScheduler.from_config(
+def make_scheduler(config: Any):
+    diffusers = get_diffusers()
+    return diffusers["scheduler"].from_config(
         config,
         algorithm_type="sde-dpmsolver++",
         use_karras_sigmas=True,
@@ -285,6 +314,7 @@ def load_config() -> dict[str, Any]:
 
 
 def clear_cuda() -> None:
+    torch = get_torch()
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()

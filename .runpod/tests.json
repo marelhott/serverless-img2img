@@ -12,7 +12,7 @@
         "scale": 1.0,
         "num_images": 1
       },
-      "timeout": 30000
+      "timeout": 180000
     }
   ],
   "config": {

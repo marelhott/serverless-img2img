@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "basic-img2img-request",
+      "input": {
+        "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wn8n0sAAAAASUVORK5CYII=",
+        "model_id": "sdxl_base",
+        "lora_id": "none",
+        "denoise": 0.35,
+        "lora_strength": 0.8,
+        "quality": "balanced",
+        "scale": 1.0,
+        "num_images": 1
+      },
+      "timeout": 30000
+    }
+  ],
+  "config": {
+    "gpuTypeId": "NVIDIA GeForce RTX 4090",
+    "gpuCount": 1,
+    "env": [
+      {
+        "key": "RUNPOD_TEST_MODE",
+        "value": "true"
+      },
+      {
+        "key": "OUTPUT_FORMAT",
+        "value": "PNG"
+      }
+    ],
+    "allowedCudaVersions": ["12.4", "12.5", "12.6", "12.7"]
+  }
+}

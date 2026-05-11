@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "id": "sdxl_base",
+      "name": "SDXL Base",
+      "path": "/workspace/models/checkpoints/sd_xl_base_1.0.safetensors"
+    },
+    {
+      "id": "tuymans_sdxl",
+      "name": "Tuymans SDXL",
+      "path": "/workspace/models/checkpoints/Tuymans_SDXL.safetensors"
+    },
+    {
+      "id": "tuy_small",
+      "name": "Tuy Small",
+      "path": "/workspace/models/checkpoints/tuy_small.safetensors"
+    }
+  ],
+  "loras": [
+    {
+      "id": "none",
+      "name": "No LoRA",
+      "path": null
+    },
+    {
+      "id": "lora_tuymans_style",
+      "name": "Tuymans Style",
+      "path": "/workspace/models/loras/lora_tuymans_style.safetensors"
+    },
+    {
+      "id": "lora_tuymans_sdxl",
+      "name": "Tuymans SDXL LoRA",
+      "path": "/workspace/models/loras/lora_tuymans_SDXL.safetensors"
+    },
+    {
+      "id": "flux_tuymans_000001400",
+      "name": "Flux Tuymans 000001400",
+      "path": "/workspace/models/loras/flux_tuymans_000001400.safetensors"
+    },
+    {
+      "id": "lora_tuy_small",
+      "name": "Tuy Small LoRA",
+      "path": "/workspace/models/loras/lora_tuy_small.safetensors"
+    }
+  ]
+}

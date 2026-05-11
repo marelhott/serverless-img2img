@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY app_runtime /app/app_runtime
 COPY config /app/config
 COPY pod/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 ENV PYTHONPATH=/app
@@ -32,4 +33,3 @@ ENV MAX_IMAGE_SIDE=1536
 EXPOSE 8000
 
 CMD ["/bin/bash", "/app/start.sh"]
-

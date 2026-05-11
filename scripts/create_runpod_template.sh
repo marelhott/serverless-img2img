@@ -57,7 +57,7 @@ cat > "$PAYLOAD_FILE" <<EOF
   ],
   "dockerStartCmd": [
     "-lc",
-    "exec /app/start.sh"
+    "exec /bin/bash /app/start.sh"
   ],
   "env": {
     "HOST": "0.0.0.0",

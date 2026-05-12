@@ -57,6 +57,30 @@ def api_library():
     return {"items": load_library_items()}
 
 
+@app.delete("/api/library/{item_id}")
+def api_library_delete(item_id: str):
+    metadata_path = OUTPUTS_DIR / f"{item_id}.json"
+    if not metadata_path.exists():
+        raise HTTPException(status_code=404, detail="Library item not found.")
+
+    try:
+        data = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Invalid library metadata: {exc}") from exc
+
+    image_name = data.get("filename")
+    image_path = OUTPUTS_DIR / image_name if image_name else None
+
+    try:
+        metadata_path.unlink(missing_ok=True)
+        if image_path is not None:
+            image_path.unlink(missing_ok=True)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete library item: {exc}") from exc
+
+    return {"ok": True, "id": item_id}
+
+
 @app.post("/api/generate")
 def api_generate(payload: dict):
     job_id = uuid.uuid4().hex
@@ -217,4 +241,3 @@ def load_library_items() -> list[dict[str, Any]]:
 
 def now_iso() -> str:
     return datetime.now(UTC).isoformat()
-

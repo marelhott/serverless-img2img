@@ -544,9 +544,9 @@ input[type="range"]::-moz-range-thumb {
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 0.62rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .library-toggle-title {
@@ -556,7 +556,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .library-toggle strong {
-  font-size: 0.62rem;
+  font-size: 0.74rem;
   font-weight: 600;
 }
 

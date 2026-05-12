@@ -21,6 +21,12 @@ function fileToBase64(file) {
   });
 }
 
+function buildImageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
+  return `${API_URL}${path}`;
+}
+
 function App() {
   const [models, setModels] = useState([]);
   const [loras, setLoras] = useState([]);
@@ -32,13 +38,15 @@ function App() {
   const [resizeScale, setResizeScale] = useState(1);
   const [modelId, setModelId] = useState("sdxl_base");
   const [loraId, setLoraId] = useState("none");
-  const [numImages, setNumImages] = useState(1);
-  const [denoise, setDenoise] = useState(0.35);
-  const [cfg, setCfg] = useState(1.8);
+  const [numImages, setNumImages] = useState(2);
+  const [denoise, setDenoise] = useState(0.45);
+  const [cfg, setCfg] = useState(5);
   const [steps, setSteps] = useState(25);
   const [sampler, setSampler] = useState("dpmpp_2m");
   const [schedule, setSchedule] = useState("karras");
   const [results, setResults] = useState([]);
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [libraryOpen, setLibraryOpen] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [error, setError] = useState("");
   const [job, setJob] = useState(EMPTY_JOB);
@@ -70,6 +78,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    loadLibrary().catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!jobId) return undefined;
 
     let isCancelled = false;
@@ -85,6 +97,12 @@ function App() {
 
         if (data.status === "completed") {
           setResults(data.result?.images || []);
+          if (data.result?.library_items?.length) {
+            setLibraryItems((current) => [...data.result.library_items, ...current]);
+            setLibraryOpen(true);
+          } else {
+            loadLibrary().catch(() => {});
+          }
           setError("");
           return;
         }
@@ -122,6 +140,7 @@ function App() {
   const isGenerating =
     job.status === "preparing" || job.status === "queued" || job.status === "waiting" || job.status === "running";
   const progressValue = Math.max(0, Math.min(100, Math.round((job.progress || 0) * 100)));
+  const visibleLogs = job.logs?.slice(-10) || [];
 
   function handleFileChange(event) {
     const file = event.target.files?.[0];
@@ -198,23 +217,55 @@ function App() {
     }
   }
 
+  async function loadLibrary() {
+    const response = await fetch(`${API_URL}/api/library`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Library load failed.");
+    }
+    setLibraryItems(data.items || []);
+  }
+
+  function openResultImage(image) {
+    setSelectedImage({
+      src: buildImageUrl(`data:image/${image.format || "png"};base64,${image.image_base64}`),
+      width: image.width,
+      height: image.height,
+    });
+  }
+
+  function openLibraryImage(item) {
+    setSelectedImage({
+      src: buildImageUrl(item.url),
+      width: item.width,
+      height: item.height,
+    });
+  }
+
   return (
     <main className="app-shell">
-      <aside className="sidebar sidebar-left">
-        <div className="sidebar-head">
-          <div className="brand-mark" />
-          <div className="brand-copy">
-            <h1>Img2Img</h1>
-            <p>RunPod pod runtime</p>
+      <aside className="app-panel app-panel-left">
+        <div className="panel-intro">
+          <div className="section-mark" />
+          <div className="intro-copy">
+            <h1>IMG2IMG</h1>
+            <p>RUNPOD POD RUNTIME</p>
           </div>
         </div>
 
-        <section className="panel-block">
-          <label className="upload-dropzone">
+        <div className="panel-divider" />
+
+        <section className="control-group upload-group">
+          <SectionTitle title="UPLOAD IMAGE" />
+          <label className="upload-frame">
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFileChange} />
-            {previewUrl ? <img src={previewUrl} alt="Input" /> : <span>Upload image</span>}
+            {previewUrl ? <img src={previewUrl} alt="Input" /> : <span className="upload-plus">+</span>}
+            <span className="frame-corner frame-corner-tl" />
+            <span className="frame-corner frame-corner-tr" />
+            <span className="frame-corner frame-corner-bl" />
+            <span className="frame-corner frame-corner-br" />
           </label>
-          <div className="upload-meta">
+          <div className="upload-foot">
             <span>{imageFile?.name || "No file"}</span>
             <strong>
               {imageSize.width} x {imageSize.height}
@@ -222,46 +273,24 @@ function App() {
           </div>
         </section>
 
-        <SidebarField label="Model">
-          <select value={modelId} onChange={(event) => setModelId(event.target.value)}>
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
-        </SidebarField>
+        <FieldSelect label="MODEL" value={modelId} onChange={setModelId} options={models} />
+        <FieldSelect label="LORA" value={loraId} onChange={setLoraId} options={loras} />
 
-        <SidebarField label="LoRA">
-          <select value={loraId} onChange={(event) => setLoraId(event.target.value)}>
-            {loras.map((lora) => (
-              <option key={lora.id} value={lora.id}>
-                {lora.name}
-              </option>
-            ))}
-          </select>
-        </SidebarField>
+        <SliderField label="IMAGES" value={String(numImages)}>
+          <input type="range" min="1" max="4" step="1" value={numImages} onChange={(event) => setNumImages(Number(event.target.value))} />
+        </SliderField>
 
-        <SidebarField label="Images">
-          <select value={numImages} onChange={(event) => setNumImages(Number(event.target.value))}>
-            {[1, 2, 3, 4].map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </SidebarField>
-
-        <SidebarField label="Resolution">
-          <div className="resolution-readout">
-            <div>
-              <span>Source</span>
+        <label className="control-group resolution-group">
+          <SectionTitle title="RESOLUTION" />
+          <div className="resolution-head">
+            <div className="resolution-box">
+              <span>SOURCE</span>
               <strong>
                 {imageSize.width} x {imageSize.height}
               </strong>
             </div>
-            <div>
-              <span>Target</span>
+            <div className="resolution-box">
+              <span>TARGET</span>
               <strong>
                 {targetSize.width} x {targetSize.height}
               </strong>
@@ -275,48 +304,55 @@ function App() {
             value={resizeScale}
             onChange={(event) => setResizeScale(Number(event.target.value))}
           />
-        </SidebarField>
+        </label>
       </aside>
 
-      <section className="workspace">
-        <div className="workspace-topbar">
-          <div className="workspace-copy">
-            <strong>Outputs</strong>
-            <span>
-              {isGenerating
-                ? `${progressValue}% ${job.message || "Running"}`
-                : results.length
-                  ? `${results.length} ready`
-                  : `${numImages} placeholders`}
+      <section className="app-panel app-panel-center">
+        <div className="workspace-header">
+          <div className="workspace-meta">
+            <SectionTitle title="OUTPUTS" />
+            <span className="workspace-subline">
+              {results.length ? `${results.length} READY` : `${numImages} PLACEHOLDERS`}
             </span>
           </div>
           <button className="generate-button" disabled={isGenerating || !imageFile} onClick={handleGenerate}>
-            {isGenerating ? "Generating" : "Generate"}
+            {isGenerating ? "GENERATING" : "GENERATE"}
           </button>
         </div>
 
-        {error ? <div className="error-banner">{error}</div> : null}
+        <div className="panel-divider" />
 
-        <div className={`output-grid output-grid-${numImages}`}>
+        {error ? <div className="error-line">{error}</div> : null}
+
+        <div className={`output-stage output-stage-${numImages}`}>
           {Array.from({ length: numImages }).map((_, index) => {
             const image = results[index];
+            const imageSrc = image ? `data:image/${image.format || "png"};base64,${image.image_base64}` : "";
             return (
               <button
                 key={index}
                 type="button"
                 className={`output-tile ${image ? "is-filled" : ""}`}
-                onClick={() => image && setSelectedImage(image)}
+                onClick={() => image && openResultImage(image)}
                 disabled={!image}
               >
+                <span className="frame-corner frame-corner-tl" />
+                <span className="frame-corner frame-corner-tr" />
+                <span className="frame-corner frame-corner-bl" />
+                <span className="frame-corner frame-corner-br" />
+
                 {image ? (
                   <>
-                    <img src={`data:image/${image.format || "png"};base64,${image.image_base64}`} alt={`Output ${index + 1}`} />
-                    <span>
+                    <img src={imageSrc} alt={`Output ${index + 1}`} />
+                    <span className="output-dimensions">
                       {image.width} x {image.height}
                     </span>
                   </>
                 ) : (
-                  <span className="placeholder-label">{isGenerating ? "Generating" : `Output ${index + 1}`}</span>
+                  <div className="tile-state">
+                    <strong>{isGenerating ? `${progressValue}%` : `#${index + 1}`}</strong>
+                    <span>{isGenerating ? "GENERATING..." : "PLACEHOLDER"}</span>
+                  </div>
                 )}
               </button>
             );
@@ -324,20 +360,21 @@ function App() {
         </div>
       </section>
 
-      <aside className="sidebar sidebar-right">
-        <SidebarField label="Denoise" value={denoise.toFixed(2)}>
+      <aside className="app-panel app-panel-right">
+        <SliderField label="DENOISE" value={denoise.toFixed(2)}>
           <input type="range" min="0.05" max="1" step="0.01" value={denoise} onChange={(event) => setDenoise(Number(event.target.value))} />
-        </SidebarField>
+        </SliderField>
 
-        <SidebarField label="CFG" value={cfg.toFixed(1)}>
+        <SliderField label="CFG" value={cfg.toFixed(1)}>
           <input type="range" min="1" max="20" step="0.1" value={cfg} onChange={(event) => setCfg(Number(event.target.value))} />
-        </SidebarField>
+        </SliderField>
 
-        <SidebarField label="Steps" value={String(steps)}>
+        <SliderField label="STEPS" value={String(steps)}>
           <input type="range" min="1" max="80" step="1" value={steps} onChange={(event) => setSteps(Number(event.target.value))} />
-        </SidebarField>
+        </SliderField>
 
-        <SidebarField label="Sampler">
+        <label className="control-group">
+          <SectionTitle title="SAMPLER" />
           <select value={sampler} onChange={(event) => setSampler(event.target.value)}>
             {samplers.map((item) => (
               <option key={item.id} value={item.id}>
@@ -345,9 +382,10 @@ function App() {
               </option>
             ))}
           </select>
-        </SidebarField>
+        </label>
 
-        <SidebarField label="Schedule">
+        <label className="control-group">
+          <SectionTitle title="SCHEDULE" />
           <select value={schedule} onChange={(event) => setSchedule(event.target.value)}>
             {schedules.map((item) => (
               <option key={item.id} value={item.id}>
@@ -355,36 +393,52 @@ function App() {
               </option>
             ))}
           </select>
-        </SidebarField>
+        </label>
 
-        <section className="debug-panel">
-          <div className="debug-head">
-            <div>
-              <strong>Progress</strong>
-              <span>{job.message}</span>
-            </div>
+        <div className="panel-divider panel-divider-debug" />
+
+        <section className="debug-strip">
+          <div className="debug-strip-head">
+            <span>PROGRESS</span>
             <strong>{progressValue}%</strong>
           </div>
-          <div className="progress-track" aria-hidden="true">
-            <div className="progress-fill" style={{ width: `${progressValue}%` }} />
-          </div>
-          <div className="debug-meta">
-            <span>Status {job.status}</span>
-            <span>{jobId ? `Job ${jobId.slice(0, 8)}` : "No job"}</span>
-          </div>
-          <div className="debug-log">
-            {job.logs?.length ? (
-              job.logs.map((entry, index) => (
-                <div key={`${entry.timestamp}-${index}`} className="debug-line">
+          <div className="debug-strip-body">
+            {visibleLogs.length ? (
+              visibleLogs.map((entry, index) => (
+                <div key={`${entry.timestamp}-${index}`} className="debug-strip-line">
                   <span>{formatTime(entry.timestamp)}</span>
-                  <strong>{Math.round((entry.progress || 0) * 100)}%</strong>
-                  <p>{entry.message}</p>
+                  <span>{Math.round((entry.progress || 0) * 100)}%</span>
+                  <span>{entry.message}</span>
                 </div>
               ))
             ) : (
-              <div className="debug-empty">No activity.</div>
+              <div className="debug-strip-line">
+                <span>--:--:--</span>
+                <span>0%</span>
+                <span>IDLE</span>
+              </div>
             )}
           </div>
+        </section>
+
+        <section className={`library-panel ${libraryOpen ? "is-open" : ""}`}>
+          <button type="button" className="library-toggle" onClick={() => setLibraryOpen((value) => !value)}>
+            <span>LIBRARY</span>
+            <strong>{libraryItems.length}</strong>
+          </button>
+          {libraryOpen ? (
+            <div className="library-grid">
+              {libraryItems.length ? (
+                libraryItems.map((item) => (
+                  <button key={item.id} type="button" className="library-thumb" onClick={() => openLibraryImage(item)}>
+                    <img src={buildImageUrl(item.url)} alt={item.filename} loading="lazy" />
+                  </button>
+                ))
+              ) : (
+                <div className="library-empty">NO IMAGES</div>
+              )}
+            </div>
+          ) : null}
         </section>
       </aside>
 
@@ -392,12 +446,9 @@ function App() {
         <div className="lightbox" onClick={() => setSelectedImage(null)}>
           <div className="lightbox-frame" onClick={(event) => event.stopPropagation()}>
             <button type="button" className="lightbox-close" onClick={() => setSelectedImage(null)}>
-              Close
+              CLOSE
             </button>
-            <img
-              src={`data:image/${selectedImage.format || "png"};base64,${selectedImage.image_base64}`}
-              alt="Selected output"
-            />
+            <img src={selectedImage.src} alt="Selected output" />
           </div>
         </div>
       ) : null}
@@ -405,13 +456,37 @@ function App() {
   );
 }
 
-function SidebarField({ label, value, children }) {
+function SectionTitle({ title }) {
   return (
-    <label className="sidebar-field">
-      <span className="field-label">
-        <em>{label}</em>
-        {value ? <strong>{value}</strong> : null}
-      </span>
+    <div className="section-title">
+      <span className="section-mark" />
+      <strong>{title}</strong>
+    </div>
+  );
+}
+
+function FieldSelect({ label, value, onChange, options }) {
+  return (
+    <label className="control-group">
+      <SectionTitle title={label} />
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function SliderField({ label, value, children }) {
+  return (
+    <label className="control-group slider-group">
+      <div className="slider-head">
+        <SectionTitle title={label} />
+        <strong>{value}</strong>
+      </div>
       {children}
     </label>
   );

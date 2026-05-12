@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime, UTC
+import json
+import os
 from pathlib import Path
 import threading
 import uuid
@@ -13,10 +16,22 @@ from fastapi.staticfiles import StaticFiles
 from app_runtime.core import generate, get_options, is_cuda_oom
 
 
+def resolve_outputs_dir() -> Path:
+    configured = os.getenv("OUTPUTS_DIR")
+    if configured:
+        return Path(configured)
+    if Path("/workspace").exists():
+        return Path("/workspace/outputs")
+    return Path(__file__).parent.parent / "outputs"
+
+
 app = FastAPI(title="Img2Img Runtime", version="0.1.0")
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
 GENERATION_LOCK = threading.Lock()
+OUTPUTS_URL_PREFIX = "/library"
+OUTPUTS_DIR = resolve_outputs_dir()
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +50,11 @@ def health():
 @app.get("/api/options")
 def api_options():
     return get_options()
+
+
+@app.get("/api/library")
+def api_library():
+    return {"items": load_library_items()}
 
 
 @app.post("/api/generate")
@@ -73,6 +93,8 @@ def api_job_status(job_id: str):
         return job
 
 
+app.mount(OUTPUTS_URL_PREFIX, StaticFiles(directory=OUTPUTS_DIR), name="library")
+
 dist_dir = Path(__file__).parent.parent / "frontend" / "dist"
 if dist_dir.exists():
     app.mount("/", StaticFiles(directory=dist_dir, html=True), name="frontend")
@@ -85,6 +107,7 @@ def run_job(job_id: str, payload: dict[str, Any]) -> None:
         with GENERATION_LOCK:
             update_job(job_id, status="running", progress=0.03, message="GPU slot acquired")
             result = generate(payload, progress_callback=lambda progress, message: on_progress(job_id, progress, message))
+            result["library_items"] = persist_generated_images(result)
             update_job(
                 job_id,
                 status="completed",
@@ -145,5 +168,53 @@ def build_log(message: str, progress: float) -> dict[str, Any]:
     }
 
 
+def persist_generated_images(result: dict[str, Any]) -> list[dict[str, Any]]:
+    meta = result.get("meta", {})
+    saved_items = []
+
+    for index, image in enumerate(result.get("images", []), start=1):
+        raw = base64.b64decode(image["image_base64"])
+        extension = image.get("format", "png").lower()
+        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+        stem = f"{timestamp}_{index:02d}_{meta.get('model_id', 'model')}"
+        image_name = f"{stem}.{extension}"
+        image_path = OUTPUTS_DIR / image_name
+        image_path.write_bytes(raw)
+
+        record = {
+            "id": stem,
+            "filename": image_name,
+            "url": f"{OUTPUTS_URL_PREFIX}/{image_name}",
+            "width": image.get("width"),
+            "height": image.get("height"),
+            "format": extension,
+            "created_at": now_iso(),
+            "model_id": meta.get("model_id"),
+            "lora_id": meta.get("lora_id"),
+        }
+        metadata_path = OUTPUTS_DIR / f"{stem}.json"
+        metadata_path.write_text(json.dumps(record, ensure_ascii=True, indent=2), encoding="utf-8")
+        saved_items.append(record)
+
+    return saved_items
+
+
+def load_library_items() -> list[dict[str, Any]]:
+    items = []
+    for metadata_path in sorted(OUTPUTS_DIR.glob("*.json"), reverse=True):
+        try:
+            data = json.loads(metadata_path.read_text(encoding="utf-8"))
+            image_path = OUTPUTS_DIR / data["filename"]
+            if not image_path.exists():
+                continue
+            if "url" not in data:
+                data["url"] = f"{OUTPUTS_URL_PREFIX}/{data['filename']}"
+            items.append(data)
+        except Exception:
+            continue
+    return items
+
+
 def now_iso() -> str:
     return datetime.now(UTC).isoformat()
+

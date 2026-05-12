@@ -19,7 +19,8 @@ QUALITY_TO_STEPS = {
     "maximum": 50,
 }
 
-ALLOWED_SCALES = {1.0, 1.25, 1.5, 2.0}
+MIN_SCALE = 0.5
+MAX_SCALE = 4.0
 DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "config" / "models.json"
 SAMPLER_OPTIONS = {"dpmpp_2m", "euler_a", "ddim"}
 SCHEDULE_OPTIONS = {"karras", "normal"}
@@ -29,6 +30,7 @@ CURRENT_PIPELINE = None
 CURRENT_LORA_ID = "none"
 CURRENT_LORA_STRENGTH = 0.0
 MODEL_CONFIG = None
+MODEL_CONFIG_MTIME_NS = None
 TORCH_MODULE = None
 DIFFUSERS_MODULES = None
 ProgressCallback = Callable[[float, str], None]
@@ -166,9 +168,7 @@ def parse_input(payload: dict[str, Any]) -> GenerationInput:
     if not payload.get("image_base64"):
         raise ValueError("image_base64 is required.")
 
-    scale = float(payload.get("scale", 1.0))
-    if scale not in ALLOWED_SCALES:
-        scale = 1.0
+    scale = clamp(float(payload.get("scale", 1.0)), MIN_SCALE, MAX_SCALE)
 
     quality = str(payload.get("quality", "balanced")).lower()
     if quality not in QUALITY_TO_STEPS:
@@ -407,14 +407,18 @@ def get_config_item(section: str, item_id: str) -> dict[str, Any]:
 
 
 def load_config() -> dict[str, Any]:
-    global MODEL_CONFIG
-    if MODEL_CONFIG is not None:
-        return MODEL_CONFIG
+    global MODEL_CONFIG, MODEL_CONFIG_MTIME_NS
 
     configured_path = Path(os.getenv("MODEL_CONFIG_PATH", ""))
     config_path = configured_path if configured_path.is_file() else DEFAULT_CONFIG_PATH
+    mtime_ns = config_path.stat().st_mtime_ns
+
+    if MODEL_CONFIG is not None and MODEL_CONFIG_MTIME_NS == mtime_ns:
+        return MODEL_CONFIG
+
     with config_path.open("r", encoding="utf-8") as config_file:
         MODEL_CONFIG = json.load(config_file)
+    MODEL_CONFIG_MTIME_NS = mtime_ns
     return MODEL_CONFIG
 
 

@@ -19,6 +19,11 @@
       "id": "hofmann_sdxl",
       "name": "Hofmann SDXL",
       "path": "/workspace/models/checkpoints/hofmann_SDXL.safetensors"
+    },
+    {
+      "id": "tuymans_hofmann_50_50",
+      "name": "Tuymans Hofmann 50-50",
+      "path": "/workspace/models/checkpoints/Tuymans_Hofmann_50-50.safetensors"
     }
   ],
   "loras": [

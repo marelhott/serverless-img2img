@@ -196,7 +196,7 @@ function App() {
           steps: Number(steps),
           sampler,
           schedule,
-          scale: scaleToPreset(resizeScale),
+          scale: Number(resizeScale.toFixed(2)),
           num_images: Number(numImages),
         }),
       });
@@ -232,6 +232,8 @@ function App() {
       src: buildImageUrl(`data:image/${image.format || "png"};base64,${image.image_base64}`),
       width: image.width,
       height: image.height,
+      downloadUrl: `data:image/${image.format || "png"};base64,${image.image_base64}`,
+      filename: `img2img-output.${image.format || "png"}`,
     });
   }
 
@@ -240,6 +242,8 @@ function App() {
       src: buildImageUrl(item.url),
       width: item.width,
       height: item.height,
+      downloadUrl: buildImageUrl(item.url),
+      filename: item.filename || `img2img-library-${item.id}.png`,
     });
   }
 
@@ -254,6 +258,14 @@ function App() {
     const anchor = document.createElement("a");
     anchor.href = buildImageUrl(item.url);
     anchor.download = item.filename || `img2img-library-${item.id}.png`;
+    anchor.click();
+  }
+
+  function downloadSelectedImage() {
+    if (!selectedImage?.downloadUrl) return;
+    const anchor = document.createElement("a");
+    anchor.href = selectedImage.downloadUrl;
+    anchor.download = selectedImage.filename || "img2img-output.png";
     anchor.click();
   }
 
@@ -325,7 +337,7 @@ function App() {
           <input
             type="range"
             min="0.5"
-            max="2"
+            max="4"
             step="0.05"
             value={resizeScale}
             onChange={(event) => setResizeScale(Number(event.target.value))}
@@ -495,6 +507,9 @@ function App() {
       {selectedImage ? (
         <div className="lightbox" onClick={() => setSelectedImage(null)}>
           <div className="lightbox-frame" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="lightbox-download" onClick={downloadSelectedImage} aria-label="Download image">
+              ↓
+            </button>
             <button type="button" className="lightbox-close" onClick={() => setSelectedImage(null)}>
               CLOSE
             </button>
@@ -544,13 +559,6 @@ function SliderField({ label, value, children }) {
 
 function normalizeMultipleOfEight(value) {
   return Math.max(64, Math.round(value / 8) * 8);
-}
-
-function scaleToPreset(scale) {
-  if (scale <= 1.125) return 1;
-  if (scale <= 1.375) return 1.25;
-  if (scale <= 1.75) return 1.5;
-  return 2;
 }
 
 function formatTime(isoValue) {

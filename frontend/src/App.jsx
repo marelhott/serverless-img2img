@@ -423,7 +423,10 @@ function App() {
 
         <section className={`library-panel ${libraryOpen ? "is-open" : ""}`}>
           <button type="button" className="library-toggle" onClick={() => setLibraryOpen((value) => !value)}>
-            <span>LIBRARY</span>
+            <span className="library-toggle-title">
+              <span className="section-mark" />
+              <span>LIBRARY</span>
+            </span>
             <strong>{libraryItems.length}</strong>
           </button>
           {libraryOpen ? (

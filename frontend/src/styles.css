@@ -549,8 +549,14 @@ input[type="range"]::-moz-range-thumb {
   letter-spacing: 0.08em;
 }
 
+.library-toggle-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .library-toggle strong {
-  font-size: 0.56rem;
+  font-size: 0.62rem;
   font-weight: 600;
 }
 

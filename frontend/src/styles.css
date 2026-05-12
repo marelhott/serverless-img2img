@@ -496,7 +496,7 @@ input[type="range"]::-moz-range-thumb {
   height: 442px;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 0;
   color: var(--muted);
   border: 1px dashed rgba(39, 55, 187, 0.14);
 }
@@ -508,7 +508,7 @@ input[type="range"]::-moz-range-thumb {
 .output-tile.is-filled {
   border-style: solid;
   border-color: rgba(39, 55, 187, 0.12);
-  background: #05070d;
+  background: transparent;
 }
 
 .output-image-shell {
@@ -558,6 +558,7 @@ input[type="range"]::-moz-range-thumb {
   display: grid;
   justify-items: center;
   gap: 16px;
+  padding: 18px;
 }
 
 .tile-state strong {

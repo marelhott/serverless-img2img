@@ -38,6 +38,7 @@ function App() {
   const [resizeScale, setResizeScale] = useState(1);
   const [modelId, setModelId] = useState("sdxl_base");
   const [loraId, setLoraId] = useState("none");
+  const [loraStrength, setLoraStrength] = useState(0.8);
   const [numImages, setNumImages] = useState(2);
   const [denoise, setDenoise] = useState(0.45);
   const [cfg, setCfg] = useState(5);
@@ -190,7 +191,7 @@ function App() {
           model_id: modelId,
           lora_id: loraId,
           denoise: Number(denoise),
-          lora_strength: 0.8,
+          lora_strength: Number(loraStrength),
           cfg: Number(cfg),
           steps: Number(steps),
           sampler,
@@ -242,6 +243,20 @@ function App() {
     });
   }
 
+  function downloadDataImage(image, index) {
+    const anchor = document.createElement("a");
+    anchor.href = `data:image/${image.format || "png"};base64,${image.image_base64}`;
+    anchor.download = `img2img-output-${index + 1}.${image.format || "png"}`;
+    anchor.click();
+  }
+
+  function downloadLibraryImage(item) {
+    const anchor = document.createElement("a");
+    anchor.href = buildImageUrl(item.url);
+    anchor.download = item.filename || `img2img-library-${item.id}.png`;
+    anchor.click();
+  }
+
   return (
     <main className="app-shell">
       <aside className="app-panel app-panel-left">
@@ -275,6 +290,17 @@ function App() {
 
         <FieldSelect label="MODEL" value={modelId} onChange={setModelId} options={models} />
         <FieldSelect label="LORA" value={loraId} onChange={setLoraId} options={loras} />
+
+        <SliderField label="LORA STR" value={loraStrength.toFixed(2)}>
+          <input
+            type="range"
+            min="0"
+            max="2"
+            step="0.01"
+            value={loraStrength}
+            onChange={(event) => setLoraStrength(Number(event.target.value))}
+          />
+        </SliderField>
 
         <SliderField label="IMAGES" value={String(numImages)}>
           <input type="range" min="1" max="4" step="1" value={numImages} onChange={(event) => setNumImages(Number(event.target.value))} />
@@ -344,6 +370,17 @@ function App() {
                 {image ? (
                   <>
                     <img src={imageSrc} alt={`Output ${index + 1}`} />
+                    <button
+                      type="button"
+                      className="output-download"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        downloadDataImage(image, index);
+                      }}
+                      aria-label={`Download output ${index + 1}`}
+                    >
+                      ↓
+                    </button>
                     <span className="output-dimensions">
                       {image.width} x {image.height}
                     </span>
@@ -433,9 +470,19 @@ function App() {
             <div className="library-grid">
               {libraryItems.length ? (
                 libraryItems.map((item) => (
-                  <button key={item.id} type="button" className="library-thumb" onClick={() => openLibraryImage(item)}>
-                    <img src={buildImageUrl(item.url)} alt={item.filename} loading="lazy" />
-                  </button>
+                  <div key={item.id} className="library-card">
+                    <button type="button" className="library-thumb" onClick={() => openLibraryImage(item)}>
+                      <img src={buildImageUrl(item.url)} alt={item.filename} loading="lazy" />
+                    </button>
+                    <button
+                      type="button"
+                      className="library-download"
+                      onClick={() => downloadLibraryImage(item)}
+                      aria-label={`Download ${item.filename}`}
+                    >
+                      ↓
+                    </button>
+                  </div>
                 ))
               ) : (
                 <div className="library-empty">NO IMAGES</div>

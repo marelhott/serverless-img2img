@@ -411,25 +411,25 @@ input[type="range"]::-moz-range-thumb {
   display: grid;
   justify-content: center;
   align-content: start;
-  gap: 42px 48px;
-  padding: 26px 10px 10px;
+  gap: 56px 72px;
+  padding: 38px 24px 18px;
   background-image: radial-gradient(rgba(39, 55, 187, 0.12) 0.8px, transparent 0.8px);
   background-size: 16px 16px;
 }
 
 .output-stage-1 {
-  grid-template-columns: 320px;
+  grid-template-columns: 384px;
 }
 
 .output-stage-2,
 .output-stage-3,
 .output-stage-4 {
-  grid-template-columns: repeat(2, 320px);
+  grid-template-columns: repeat(2, 384px);
 }
 
 .output-tile {
-  width: 320px;
-  height: 320px;
+  width: 384px;
+  height: 384px;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -458,6 +458,21 @@ input[type="range"]::-moz-range-thumb {
   color: var(--muted);
   font-size: 0.54rem;
   letter-spacing: 0.05em;
+}
+
+.output-download {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(39, 55, 187, 0.18);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--accent);
+  font-size: 0.8rem;
+  line-height: 1;
 }
 
 .tile-state {
@@ -563,9 +578,13 @@ input[type="range"]::-moz-range-thumb {
 .library-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
   max-height: 180px;
   overflow: auto;
+}
+
+.library-card {
+  position: relative;
 }
 
 .library-thumb {
@@ -580,6 +599,21 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.library-download {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(39, 55, 187, 0.18);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--accent);
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .library-empty {
@@ -643,16 +677,16 @@ input[type="range"]::-moz-range-thumb {
   .output-stage-2,
   .output-stage-3,
   .output-stage-4 {
-    grid-template-columns: repeat(2, 280px);
+    grid-template-columns: repeat(2, 320px);
   }
 
   .output-stage-1 {
-    grid-template-columns: 280px;
+    grid-template-columns: 320px;
   }
 
   .output-tile {
-    width: 280px;
-    height: 280px;
+    width: 320px;
+    height: 320px;
   }
 }
 

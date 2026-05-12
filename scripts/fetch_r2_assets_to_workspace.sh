@@ -74,13 +74,15 @@ download_group() {
 
 download_group "checkpoint" \
   "Tuymans_SDXL.safetensors" "$R2_MODELS_BASE/Tuymans_SDXL.safetensors" "$CHECKPOINTS_DIR" \
-  "tuy_small.safetensors" "$R2_MODELS_BASE/tuy_small.safetensors" "$CHECKPOINTS_DIR"
+  "tuy_small.safetensors" "$R2_MODELS_BASE/tuy_small.safetensors" "$CHECKPOINTS_DIR" \
+  "hofmann_SDXL.safetensors" "$R2_MODELS_BASE/hofmann_SDXL.safetensors" "$CHECKPOINTS_DIR"
 
 download_group "lora" \
   "flux_tuymans_000001400.safetensors" "$R2_LORAS_BASE/flux_tuymans_000001400.safetensors" "$LORAS_DIR" \
   "lora_tuymans_SDXL.safetensors" "$R2_LORAS_BASE/lora_tuymans_SDXL.safetensors" "$LORAS_DIR" \
   "lora_tuymans_style.safetensors" "$R2_LORAS_BASE/lora_tuymans_style.safetensors" "$LORAS_DIR" \
-  "lora_tuy_small.safetensors" "$R2_LORAS_BASE/lora_tuy_small.safetensors" "$LORAS_DIR"
+  "lora_tuy_small.safetensors" "$R2_LORAS_BASE/lora_tuy_small.safetensors" "$LORAS_DIR" \
+  "lora_hofmann_SDXL.safetensors" "$R2_LORAS_BASE/lora_hofmann_SDXL.safetensors" "$LORAS_DIR"
 
 if [[ "$INCLUDE_SDXL_BASE" == "1" ]]; then
   download_one \
